@@ -37,39 +37,53 @@ except:
     numpy.save('data.npy', classes)
 
     model = Sequential()
-    model.add(Dense(512, input_dim=num_pixels, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(num_classes, kernel_initializer='normal', activation='softmax'))
+    model.add(Dense(64, input_dim=num_pixels, activation='relu'))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(num_classes, activation='softmax'))
+
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    model.fit(X_train, y_train, epochs=30, batch_size=200,verbose=2)
+
+    model.fit(X_train, y_train, epochs=15, validation_data=(X_test, y_test), batch_size=32)
     model.save('model_numbers.h5')
 
     # model.summary()
 
 def image_to_data(path):
-    img = Image.open(path).resize((28,28)) # 28x28 pixels
-    # img.save('new_im.png')
-    new_img = img.convert('L')  # RGB => gray : (R + G + B)/3
-    plt.subplot(221)
-    plt.imshow(new_img)
-    plt.subplot(222)
-    plt.imshow(new_img, cmap='gray')
-    plt.show()
-    arr = numpy.array(new_img.getdata()).reshape((1,784)).astype('float32')/255.0
+    img = Image.open(path)
+    img = img.convert('L')  # RGB => gray : (R + G + B)/3
+    new_img = img.resize((28,28)) # 28x28 pixels
+    arr = numpy.asarray(new_img).reshape((1,784)).astype('float32')/255.0
     return arr
 
-test_img = image_to_data('my_number.png') #changue image with paint
+numbers = [f'n{n}.png' for n in range(10)] # images
 
-pred = model.predict(test_img).flatten()
+def evaluate(numbers):
+    fig = plt.figure(figsize=(10,6))
+    for i,img in enumerate(numbers):
+        ax = plt.subplot(5,4,i*2+1)
 
-pos = numpy.flip(numpy.argsort(pred))
-outcome = [str(x) for x in classes[pos]]
+        test_img = image_to_data(img)
+        ax.imshow(test_img.reshape((28,28)))
 
-title = '>'.join(outcome)
+        pred = model.predict(test_img).flatten()
+        num = classes[numpy.argsort(pred)][-1]
 
-plt.plot(classes, pred)
-plt.xticks(classes)
-plt.title(title)
-plt.grid()
-plt.show()
+        ax2 = plt.subplot(5,4,i*2+2)
+        ax2.bar(classes, pred)
+        ax2.set_xticks(classes)
+        ax2.set_title('label: '+str(i)+' predict: '+str(num))
+        plt.grid()
+
+    plt.tight_layout(h_pad=0, w_pad=0)
+    plt.show()
+    fig.savefig('predictions.png')
+
+evaluate(numbers)
+
+# for i in range(10):
+#     img = Image.open(numbers[i]).resize((28,28))
+#     aux = numpy.asarray(img.convert('L')).astype('float32')/255.0
+#     pred = classes[numpy.argsort(model.predict(aux.reshape(1, 784)).flatten())][-1]
+#     print(f' label: {classes[i]} - prdict: {pred}')
 
